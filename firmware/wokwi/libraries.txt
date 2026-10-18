@@ -1,0 +1,6 @@
+# Для wokwi.com: вкладка Library Manager → или вставьте этот файл как libraries.txt
+PubSubClient
+ArduinoJson
+ESP32Servo
+Adafruit SSD1306
+Adafruit GFX Library

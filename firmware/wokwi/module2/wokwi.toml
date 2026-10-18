@@ -1,0 +1,6 @@
+# Расширение Wokwi для VS Code: откройте эту папку и нажмите «Start Simulator».
+# Сначала соберите прошивку: cd firmware && pio run -e module2
+[wokwi]
+version = 1
+firmware = '../../.pio/build/module2/firmware.bin'
+elf = '../../.pio/build/module2/firmware.elf'

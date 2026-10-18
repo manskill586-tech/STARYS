@@ -1,0 +1,5 @@
+firmware/.pio/
+firmware/.vscode/
+firmware/test/test_core
+*.stl
+.DS_Store
