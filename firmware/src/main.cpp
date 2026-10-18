@@ -26,6 +26,10 @@
 #define MODULE_ID 1  // во втором проекте Wokwi поставьте 2
 #endif
 
+#ifndef MODULE_ROLE
+#define MODULE_ROLE starys::Role::Builder  // роль: см. enum Role в swarm_core.h
+#endif
+
 #ifndef USE_MQTT
 #define USE_MQTT 1  // 0 — только Serial-режим (запасной вариант)
 #endif
@@ -53,7 +57,7 @@ static const int SERVO_CLOSED = 90;
 
 // ---- Объекты ---------------------------------------------------------------
 
-starys::SwarmModule module(MODULE_ID);
+starys::SwarmModule module(MODULE_ID, MODULE_ROLE);
 WiFiClient wifiClient;
 PubSubClient mqtt(wifiClient);
 Servo latch;
@@ -122,6 +126,7 @@ String toJson(const starys::Message& m) {
     case starys::MsgType::Hello:
       doc["id"] = m.from;
       doc["near"] = m.near;
+      doc["role"] = starys::roleName(m.role);
       break;
     default:
       doc["id"] = m.from;
@@ -143,6 +148,7 @@ bool fromJson(const char* text, starys::Message& m) {
   m.battery = doc["battery"] | 0;
   m.neighbor = doc["neighbor"] | 0;
   m.near = doc["near"] | false;
+  starys::roleFromName(doc["role"] | "builder", m.role);
   return m.from != 0;
 }
 

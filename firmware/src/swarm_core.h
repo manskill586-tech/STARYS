@@ -19,8 +19,20 @@ enum class State : uint8_t { Boot, Search, Docking, Linked, Fault };
 
 enum class MsgType : uint8_t { None, Hello, DockReq, DockAck, Data, Bye };
 
+// Роль модуля. Корпус, грани и мозг у всех одинаковые, отличается начинка.
+// Роль приходит в HELLO, поэтому сосед заранее знает, с кем стыкуется.
+// Подробнее — docs/ideas.md.
+enum class Role : uint8_t {
+  Builder,      // строитель: ходит по конструкции и встаёт в неё
+  Power,        // энергомодуль: большая батарея, заряжает соседей
+  Scout,        // разведчик-метеостанция: ветер, пыль, грунт
+  Relay,        // связист: ретранслятор до орбитального спутника
+  Coordinator,  // координатор: считает план сборки
+  Anchor,       // якорь: фундамент, закрепляется в грунте
+};
+
 // Одно сообщение протокола. В эфир уходит как JSON, см. docs/protocol.md:
-//   HELLO    {"type":"HELLO","id":1,"near":false}
+//   HELLO    {"type":"HELLO","id":1,"near":false,"role":"builder"}
 //   DOCK_REQ {"type":"DOCK_REQ","from":1,"to":2}
 //   DOCK_ACK {"type":"DOCK_ACK","from":2,"to":1}
 //   DATA     {"type":"DATA","id":2,"battery":87,"neighbor":1}
@@ -32,6 +44,7 @@ struct Message {
   int battery = 0;   // заряд, %, только для DATA
   int neighbor = 0;  // с кем состыкован отправитель, только для DATA
   bool near = false; // HELLO: «мой датчик видит кого-то вплотную»
+  Role role = Role::Builder;  // HELLO: кто я
 };
 
 // Цвет светодиода — прямо из таблицы состояний.
@@ -68,6 +81,8 @@ struct Config {
 const char* stateName(State s);
 const char* msgTypeName(MsgType t);
 MsgType msgTypeFromName(const char* name);
+const char* roleName(Role r);
+bool roleFromName(const char* name, Role& out);
 Led ledFor(State s);
 
 // ---------------------------------------------------------------------------
@@ -76,7 +91,7 @@ Led ledFor(State s);
 
 class SwarmModule {
  public:
-  explicit SwarmModule(int id, Config cfg = Config());
+  explicit SwarmModule(int id, Role role = Role::Builder, Config cfg = Config());
 
   // Вызывать каждый проход loop(). Никаких delay() — только сравнение времени.
   void tick(const Inputs& in);
@@ -88,6 +103,9 @@ class SwarmModule {
   bool popOutgoing(Message& out);
 
   int id() const { return id_; }
+  Role role() const { return role_; }
+  // Роль текущего соседа (известна из его HELLO).
+  Role neighborRole() const { return neighborRole_; }
   State state() const { return state_; }
   int neighbor() const { return neighbor_; }
   bool latchClosed() const { return latchClosed_; }
@@ -103,6 +121,7 @@ class SwarmModule {
   void send(MsgType type, int to, const Inputs* in = nullptr);
 
   int id_;
+  Role role_;
   Config cfg_;
   State state_ = State::Boot;
   uint32_t stateSince_ = 0;
@@ -112,6 +131,8 @@ class SwarmModule {
   // Датчик расстояния не знает, КТО перед ним, поэтому стыкуемся только
   // с тем, чей датчик тоже видит соседа вплотную (флаг near в HELLO).
   int heardPeer_ = 0;
+  Role heardRole_ = Role::Builder;
+  Role neighborRole_ = Role::Builder;
   uint32_t heardAt_ = 0;
   uint32_t lastHello_ = 0;
   bool helloSent_ = false;
@@ -176,6 +197,26 @@ inline MsgType msgTypeFromName(const char* name) {
   return MsgType::None;
 }
 
+inline const char* roleName(Role r) {
+  switch (r) {
+    case Role::Builder:     return "builder";
+    case Role::Power:       return "power";
+    case Role::Scout:       return "scout";
+    case Role::Relay:       return "relay";
+    case Role::Coordinator: return "coordinator";
+    case Role::Anchor:      return "anchor";
+  }
+  return "builder";
+}
+
+inline bool roleFromName(const char* name, Role& out) {
+  const Role all[] = {Role::Builder, Role::Power, Role::Scout,
+                      Role::Relay, Role::Coordinator, Role::Anchor};
+  for (Role r : all)
+    if (starysStrEq(name, roleName(r))) { out = r; return true; }
+  return false;
+}
+
 inline Led ledFor(State s) {
   Led l;
   switch (s) {
@@ -188,7 +229,8 @@ inline Led ledFor(State s) {
   return l;
 }
 
-inline SwarmModule::SwarmModule(int id, Config cfg) : id_(id), cfg_(cfg) {}
+inline SwarmModule::SwarmModule(int id, Role role, Config cfg)
+    : id_(id), role_(role), cfg_(cfg) {}
 
 inline void SwarmModule::send(MsgType type, int to, const Inputs* in) {
   if (count_ == kQueue) {  // переполнение: выбрасываем самое старое
@@ -203,6 +245,7 @@ inline void SwarmModule::send(MsgType type, int to, const Inputs* in) {
   if (in) m.battery = in->battery;
   m.neighbor = neighbor_;
   m.near = near_;
+  m.role = role_;
   ++count_;
 }
 
@@ -258,6 +301,7 @@ inline void SwarmModule::onMessage(const Message& m, uint32_t now) {
     case MsgType::Hello:
       if (m.near) {
         heardPeer_ = m.from;
+        heardRole_ = m.role;
         heardAt_ = now;
       } else if (m.from == heardPeer_) {
         heardPeer_ = 0;  // отъехал
@@ -268,6 +312,7 @@ inline void SwarmModule::onMessage(const Message& m, uint32_t now) {
       if (state_ == State::Search && near_) {
         // Сосед заметил нас первым — соглашаемся.
         neighbor_ = m.from;
+        neighborRole_ = m.from == heardPeer_ ? heardRole_ : Role::Builder;
         enter(State::Docking, now);
         agreed_ = true;
         agreedAt_ = now;
@@ -343,6 +388,7 @@ inline void SwarmModule::tick(const Inputs& in) {
       const bool peerFresh = heardPeer_ != 0 && now - heardAt_ <= cfg_.peerTtlMs;
       if (peerFresh && near_) {
         neighbor_ = heardPeer_;
+        neighborRole_ = heardRole_;
         enter(State::Docking, now);
         send(MsgType::DockReq, neighbor_);
       }

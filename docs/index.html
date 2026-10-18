@@ -5,22 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>STARYS</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="STARYS — рой самособирающихся модулей для строительства на Луне. Интерактивное демо мозга модуля.">
+<meta name="description" content="STARYS — рой самособирающихся модулей для строительства на Марсе. Интерактивное демо мозга модуля.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 /* Layout: пульт миссии — узкая колонка текста, широкие «стенды» с живыми приборами. */
 :root {
-  --bg: #e9ecf1;          /* реголит днём */
-  --panel: #f7f8fa;
-  --ink: #18202e;
-  --muted: #5a6474;
-  --line: #c9cfd9;
-  --accent: #2f55c8;      /* синий сигнал миссии */
-  --ground: #cfd4dc;
-  --module: #dfe3ea;
-  --module-edge: #8a94a6;
+  --bg: #f1ebe6;          /* марсианское небо днём: пыльное, цвета ириски */
+  --panel: #faf7f4;
+  --ink: #231a17;
+  --muted: #6e625c;
+  --line: #ddd0c6;
+  --accent: #2f55c8;      /* закат на Марсе синий — это наш акцент */
+  --ground: #d9b8a2;      /* реголит с оксидами железа */
+  --module: #e6e3e1;
+  --module-edge: #8b817c;
+  --dust: #c1693c;
+  --led-orange: #f28c28; --led-violet: #9b5cff;
   --led-white: #ffffff; --led-blue: #2f7bff; --led-yellow: #f2b705; --led-green: #1fae5b; --led-red: #e5383b;
   --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
   --font-body: "Golos Text", "Segoe UI", system-ui, sans-serif;
@@ -29,14 +31,14 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #10141b; --panel: #171c25; --ink: #e7ebf2; --muted: #98a2b3; --line: #2a3240;
-    --accent: #7a9bff; --ground: #222a36; --module: #2b3342; --module-edge: #6b778b;
+    --bg: #16100e; --panel: #1e1714; --ink: #efe7e2; --muted: #a99d97; --line: #3b2b26;
+    --accent: #7a9bff; --ground: #4a2a1e; --module: #2f2a2b; --module-edge: #7a706b; --dust: #d9824f;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #10141b; --panel: #171c25; --ink: #e7ebf2; --muted: #98a2b3; --line: #2a3240;
-  --accent: #7a9bff; --ground: #222a36; --module: #2b3342; --module-edge: #6b778b;
+  --bg: #16100e; --panel: #1e1714; --ink: #efe7e2; --muted: #a99d97; --line: #3b2b26;
+  --accent: #7a9bff; --ground: #4a2a1e; --module: #2f2a2b; --module-edge: #7a706b; --dust: #d9824f;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -142,9 +144,9 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
 </header>
 
 <section class="hero">
-  <span class="eyebrow">Рой самособирающихся модулей · Луна</span>
+  <span class="eyebrow">Рой самособирающихся модулей · Марс</span>
   <h1>STARYS</h1>
-  <p class="lede">Простые модули сами находят друг друга, стыкуются и собираются в опору, мост или антенну. Без людей на поверхности. Ниже работает настоящий «мозг» одного модуля — тот же автомат, что в прошивке ESP32.</p>
+  <p class="lede">Простые модули сами находят друг друга, стыкуются и собираются в опору, мост или антенну. Готовят Марс к прилёту людей. Ниже работает настоящий «мозг» одного модуля — тот же автомат, что в прошивке ESP32.</p>
   <div class="facts">
     <span>ESP32 · Wokwi</span><span>5 состояний</span><span>5 сообщений</span><span>MQTT / ESP-NOW</span>
   </div>
@@ -158,7 +160,7 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
   </div>
   <div class="bench">
     <div class="stage">
-      <svg class="scene" id="scene" viewBox="0 0 800 280" role="img" aria-label="Два модуля на лунной поверхности">
+      <svg class="scene" id="scene" viewBox="0 0 800 280" role="img" aria-label="Два модуля на поверхности Марса">
         <defs>
           <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
             <circle cx="3" cy="3" r="1.4" fill="var(--module-edge)" opacity="0.35"/>
@@ -203,8 +205,8 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
 <section id="swarm">
   <div class="section-head">
     <span class="eyebrow">Стенд 2 · масштабирование</span>
-    <h2>Рой из 18 модулей собирает фигуру</h2>
-    <p>Так выглядит следующий шаг проекта: планировщик назначает каждому модулю место, и модули встают снизу вверх, стыкуясь только с уже закреплёнными соседями. «Сбой» выбивает случайный модуль, и рой сам его заменяет.</p>
+    <h2>Рой из 18 строителей и энергомодуль</h2>
+    <p>Так выглядит следующий шаг проекта: планировщик назначает каждому модулю место, и модули встают снизу вверх, стыкуясь только с уже закреплёнными соседями. «Сбой» выбивает случайный модуль, и рой сам его заменяет. Разряженные строители сами едут к энергомодулю, а в пылевую бурю весь рой замирает и пережидает её.</p>
   </div>
   <div class="swarm">
     <canvas id="swarmCanvas" width="1040" height="455" aria-label="Рой модулей на поверхности"></canvas>
@@ -214,6 +216,7 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
         <button id="shapeBridge" type="button" aria-pressed="false">Мост</button>
         <button id="shapeAntenna" type="button" aria-pressed="false">Антенна</button>
         <button id="swarmFault" type="button">Сбой</button>
+        <button id="swarmStorm" type="button" aria-pressed="false">Пылевая буря</button>
         <button id="swarmScatter" type="button">Рассыпать</button>
       </div>
       <div class="legend">
@@ -221,6 +224,8 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
         <span><i class="dot" style="background:var(--led-yellow)"></i>стыковка</span>
         <span><i class="dot" style="background:var(--led-green)"></i>в конструкции</span>
         <span><i class="dot" style="background:var(--led-red)"></i>авария</span>
+        <span><i class="dot" style="background:var(--led-orange)"></i>зарядка</span>
+        <span><i class="dot" style="background:var(--led-violet)"></i>буря</span>
       </div>
     </div>
   </div>
@@ -229,16 +234,16 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
 <section id="idea">
   <div class="section-head">
     <span class="eyebrow">Идея</span>
-    <h2>Почему рой, а не кран и экипаж</h2>
+    <h2>Почему рой, а не экипаж и большой робот</h2>
   </div>
   <div class="pillars">
     <article>
       <h3>Проблема</h3>
-      <p>Каждый килограмм на Луне стоит десятки тысяч долларов, а час работы человека на поверхности — риск для жизни. Строить базу руками дорого и опасно.</p>
+      <p>Базе на Марсе нужны площадки, опоры и мачты ещё до прилёта людей. Связь с Землёй идёт с задержкой 3–22 минуты, так что управлять стройкой с пульта нельзя, а большой робот при поломке останавливает всё.</p>
     </article>
     <article>
       <h3>Решение</h3>
-      <p>Одинаковые простые модули. Каждый умеет найти соседа, договориться и защёлкнуться. Вместе они собираются в опору, мост или мачту антенны, а сломанный модуль заменяется любым другим.</p>
+      <p>Одинаковые простые модули. Каждый умеет найти соседа, договориться и защёлкнуться. Вместе они собираются в опору, мост или мачту антенны, а сломанный модуль заменяется любым другим. Решения рой принимает сам, переживает пылевые бури и сам ездит на зарядку.</p>
     </article>
     <article>
       <h3>Первый кирпичик</h3>
@@ -262,7 +267,7 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
 </section>
 
 <footer>
-  <span>STARYS · проект команды для МКИ</span>
+  <span>STARYS · проект команды для МКИ · <a href="https://github.com/manskill586-tech/STARYS/blob/HEAD/docs/ideas.md">идеи развития</a> · <a href="https://github.com/manskill586-tech/STARYS/blob/HEAD/docs/environments.md">Земля и другие миры</a></span>
   <span>Код, схемы и 3D-модели: <a href="https://github.com/manskill586-tech/STARYS">github.com/manskill586-tech/STARYS</a></span>
 </footer>
 
@@ -370,7 +375,7 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
     const o = { type: m.type };
     if (m.type === "DOCK_REQ" || m.type === "DOCK_ACK") { o.from = m.from; o.to = m.to; }
     else if (m.type === "DATA") { o.id = m.from; o.battery = m.battery; o.neighbor = m.neighbor; }
-    else if (m.type === "HELLO") { o.id = m.from; o.near = m.near; }
+    else if (m.type === "HELLO") { o.id = m.from; o.near = m.near; o.role = "builder"; }
     else { o.id = m.from; if (m.to) o.to = m.to; }
     return JSON.stringify(o);
   }
@@ -608,30 +613,38 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
   log("питание подано, модули проверяют датчики");
 
   // ---------------------------------------------------------------------
-  // Стенд 2 — рой
+  // Стенд 2 — рой: строители, энергомодуль и пылевая буря
   // ---------------------------------------------------------------------
   const canvas = document.getElementById("swarmCanvas");
   const ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height, CELL = 34, GROUND = H - 60;
   const N = 18;
+  const LOW_BATTERY = 25;
+  // Энергомодуль стоит слева, строители подъезжают к нему справа.
+  const POWER = { x: 112, y: GROUND - CELL * 0.8, s: CELL * 1.6 };
   const SHAPES = {
-    // [колонка, ряд] от земли; ряд 0 стоит на грунте
+    // [колонка, ряд] от грунта; ряд 0 стоит на грунте
     tower: (() => { const s = []; for (let r = 0; r < 7; r++) { s.push([0, r]); if (r < 4) s.push([1, r]); } return s.concat([[-1, 0], [2, 0], [-1, 1], [2, 1], [0, 7]]); })(),
     bridge: [[-5,0],[-5,1],[-5,2],[5,0],[5,1],[5,2],[-4,3],[-3,3],[-2,3],[-1,3],[0,3],[1,3],[2,3],[3,3],[4,3],[-5,3],[5,3],[0,4]],
     antenna: [[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[-1,0],[1,0],[-1,6],[1,6],[-2,7],[2,7],[-2,8],[2,8],[-1,7],[1,7],[0,7]],
   };
   let shape = "tower";
   let bots = [];
+  let stormUntil = 0;
+  const dust = Array.from({ length: 140 }, (_, i) => ({ x: (i * 131) % W, y: (i * 71) % GROUND, v: 120 + (i % 7) * 30 }));
   let rng = 7;
   const rand = () => { rng = (rng * 16807) % 2147483647; return (rng - 1) / 2147483646; };
+  const btnStorm = document.getElementById("swarmStorm");
+  const stormOn = (t) => t < stormUntil;
 
   function scatter() {
     bots = [];
     for (let i = 0; i < N; i++) {
       const side = i % 2 ? 1 : -1;
       bots.push({
-        id: i + 1, x: W / 2 + side * (180 + rand() * (W / 2 - 220)), y: GROUND - CELL / 2,
+        id: i + 1, x: W / 2 + side * (180 + rand() * (W / 2 - 330)), y: GROUND - CELL / 2,
         state: "SEARCH", slot: -1, faultAt: 0, wobble: rand() * 6.28, speed: 70 + rand() * 40,
+        battery: 35 + Math.round(rand() * 65),
       });
     }
     assign();
@@ -648,12 +661,12 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
     if (r === 0) return true;
     return SHAPES[shape].some(([c2, r2], j) => filled[j] && ((c2 === c && r2 === r - 1) || (r2 === r && Math.abs(c2 - c) === 1)));
   }
-  // Жадный планировщик: свободному модулю — ближайший доступный слот.
+  // Жадный планировщик: свободному заряженному модулю — ближайший доступный слот.
   function assign() {
     const S = SHAPES[shape];
     const taken = new Array(S.length).fill(false);
     bots.forEach((b) => { if (b.slot >= S.length) b.slot = -1; if (b.slot >= 0) taken[b.slot] = true; });
-    const free = bots.filter((b) => b.slot < 0 && b.state !== "FAULT");
+    const free = bots.filter((b) => b.slot < 0 && b.state === "SEARCH");
     const open = S.map((_, i) => i).filter((i) => !taken[i]);
     // слоты снизу вверх — фундамент первым
     open.sort((a, b) => S[a][1] - S[b][1] || Math.abs(S[a][0]) - Math.abs(S[b][0]));
@@ -661,14 +674,26 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
       if (!free.length) break;
       const p = slotPos(i);
       free.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
-      const b = free.shift(); b.slot = i; b.state = "SEARCH";
+      free.shift().slot = i;
     }
   }
   function setShape(s) {
     shape = s;
-    bots.forEach((b) => { b.slot = -1; if (b.state !== "FAULT") b.state = "SEARCH"; });
+    bots.forEach((b) => {
+      b.slot = -1;
+      if (b.state === "LINKED" || b.state === "DOCKING") { b.state = "SEARCH"; b.y = GROUND - CELL / 2; }
+    });
     ["Tower", "Bridge", "Antenna"].forEach((n) => document.getElementById(`shape${n}`).setAttribute("aria-pressed", String(n.toLowerCase() === s)));
     assign();
+  }
+
+  function moveTo(b, tx, ty, v) {
+    const dx = tx - b.x, dy = ty - b.y;
+    // далеко — едем по грунту; рядом — взбираемся по грани, потом шаг вбок
+    if (Math.abs(dx) > CELL * 1.5 + 1) b.x += Math.sign(dx) * Math.min(Math.abs(dx), v);
+    else if (Math.abs(dy) > 1) b.y += Math.sign(dy) * Math.min(Math.abs(dy), v);
+    else if (Math.abs(dx) > 1) b.x += Math.sign(dx) * Math.min(Math.abs(dx), v);
+    return Math.hypot(tx - b.x, ty - b.y);
   }
 
   let swarmLast = performance.now();
@@ -677,6 +702,8 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
     const S = SHAPES[shape];
     const filled = new Array(S.length).fill(false);
     bots.forEach((b) => { if (b.slot >= 0 && b.state === "LINKED") filled[b.slot] = true; });
+    const storm = stormOn(t);
+    if (!storm && btnStorm.getAttribute("aria-pressed") === "true") { btnStorm.setAttribute("aria-pressed", "false"); assign(); }
 
     for (const b of bots) {
       if (b.state === "FAULT") {
@@ -685,30 +712,45 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
         if (t - b.faultAt > 2500) { b.state = "SEARCH"; b.slot = -1; assign(); }
         continue;
       }
-      if (b.slot < 0) { b.wobble += dt * 2; continue; }
-      if (b.state === "LINKED") continue;
+      // В бурю все замирают: защёлки закрыты, панели сложены, расход минимальный.
+      if (storm || b.state === "LINKED") continue;
+      const v = (reduceMotion ? 600 : b.speed) * dt;
+
+      if (b.state === "CHARGING") {
+        b.battery = Math.min(100, b.battery + 22 * dt);
+        if (b.battery >= 100) { b.state = "SEARCH"; assign(); }
+        continue;
+      }
+      if (b.state === "LOW") {
+        const tx = POWER.x + POWER.s / 2 + CELL * 0.6 + (b.id % 3) * CELL;
+        if (moveTo(b, tx, GROUND - CELL / 2, v) < 1.5) b.state = "CHARGING";
+        b.battery = Math.max(3, b.battery - 0.6 * dt);
+        continue;
+      }
+      if (b.slot < 0) { b.wobble += dt * 2; b.battery = Math.max(3, b.battery - 0.4 * dt); continue; }
+
+      // Строитель едет к своей ячейке и тратит заряд.
+      b.battery = Math.max(3, b.battery - 2.4 * dt);
+      if (b.battery < LOW_BATTERY) {
+        b.slot = -1; b.state = "LOW"; b.y = GROUND - CELL / 2; assign(); continue;
+      }
       const p = slotPos(b.slot);
       const ready = slotReady(b.slot, filled);
-      // едем по грунту под слот, потом «взбираемся» по конструкции
       let tx = p.x, ty = ready ? p.y : GROUND - CELL / 2;
       if (!ready) tx = p.x + (b.x < p.x ? -CELL * 1.5 : CELL * 1.5);
-      const dx = tx - b.x, dy = ty - b.y, d = Math.hypot(dx, dy);
-      const v = (reduceMotion ? 600 : b.speed) * dt;
-      // далеко — едем по грунту; рядом — взбираемся по грани, потом шаг вбок
-      if (Math.abs(dx) > CELL * 1.5 + 1) b.x += Math.sign(dx) * Math.min(Math.abs(dx), v);
-      else if (Math.abs(dy) > 1) b.y += Math.sign(dy) * Math.min(Math.abs(dy), v);
-      else if (Math.abs(dx) > 1) b.x += Math.sign(dx) * Math.min(Math.abs(dx), v);
-      b.state = d < CELL * 1.6 && ready ? "DOCKING" : "SEARCH";
+      const d = moveTo(b, tx, ty, v);
+      b.state = Math.hypot(p.x - b.x, p.y - b.y) < CELL * 1.6 && ready ? "DOCKING" : "SEARCH";
       if (d < 1.5 && ready) { b.x = p.x; b.y = p.y; b.state = "LINKED"; filled[b.slot] = true; }
     }
-    drawSwarm(t, filled);
+    drawSwarm(t, filled, storm);
   }
 
-  function drawSwarm(t, filled) {
+  function drawSwarm(t, filled, storm) {
     const c = {
       bg: css("--bg"), ground: css("--ground"), edge: css("--module-edge"), mod: css("--module"),
-      ink: css("--ink"), muted: css("--muted"), line: css("--line"),
+      ink: css("--ink"), muted: css("--muted"), line: css("--line"), dust: css("--dust"),
       blue: css("--led-blue"), yellow: css("--led-yellow"), green: css("--led-green"), red: css("--led-red"),
+      orange: css("--led-orange"), violet: css("--led-violet"),
     };
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = c.bg; ctx.fillRect(0, 0, W, H);
@@ -716,31 +758,67 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
     ctx.fillStyle = c.edge;
     for (let i = 0; i < 40; i++) { const x = (i * 97) % W, y = (i * 53) % (GROUND - 80); ctx.globalAlpha = 0.25; ctx.fillRect(x, y, 2, 2); }
     ctx.globalAlpha = 1;
-    // Земля на горизонте
-    ctx.beginPath(); ctx.arc(W - 90, 70, 26, 0, Math.PI * 2); ctx.strokeStyle = c.edge; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.beginPath(); ctx.arc(W - 90, 70, 26, -Math.PI / 2, Math.PI / 2); ctx.fillStyle = c.line; ctx.fill();
+    // Фобос
+    ctx.save(); ctx.translate(W - 90, 64); ctx.rotate(-0.35);
+    ctx.beginPath(); ctx.ellipse(0, 0, 20, 14, 0, 0, Math.PI * 2); ctx.fillStyle = c.line; ctx.fill();
+    ctx.strokeStyle = c.edge; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
     // грунт
     ctx.fillStyle = c.ground; ctx.fillRect(0, GROUND, W, H - GROUND);
     // контур цели
     ctx.setLineDash([4, 4]); ctx.strokeStyle = c.muted; ctx.lineWidth = 1;
     SHAPES[shape].forEach((_, i) => { if (!filled[i]) { const p = slotPos(i); ctx.strokeRect(p.x - CELL / 2 + 2, p.y - CELL / 2 + 2, CELL - 4, CELL - 4); } });
     ctx.setLineDash([]);
+
+    // энергомодуль: куб побольше и раскрытые панели (в бурю сложены)
+    const px = POWER.x - POWER.s / 2, py = GROUND - POWER.s;
+    ctx.strokeStyle = c.orange; ctx.lineWidth = 2;
+    if (!storm) {
+      ctx.beginPath(); ctx.moveTo(px, py + 6); ctx.lineTo(px - 30, py - 22); ctx.moveTo(px + POWER.s, py + 6); ctx.lineTo(px + POWER.s + 30, py - 22); ctx.stroke();
+      ctx.strokeRect(px - 52, py - 34, 34, 14); ctx.strokeRect(px + POWER.s + 18, py - 34, 34, 14);
+    }
+    ctx.fillStyle = c.mod; ctx.strokeStyle = c.edge; ctx.lineWidth = 1.5;
+    ctx.fillRect(px, py, POWER.s, POWER.s); ctx.strokeRect(px, py, POWER.s, POWER.s);
+    ctx.fillStyle = c.orange;
+    ctx.beginPath();
+    const bx = POWER.x, by = GROUND - POWER.s / 2;
+    ctx.moveTo(bx + 3, by - 14); ctx.lineTo(bx - 8, by + 2); ctx.lineTo(bx, by + 2); ctx.lineTo(bx - 3, by + 14); ctx.lineTo(bx + 8, by - 2); ctx.lineTo(bx, by - 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c.muted; ctx.font = `11px ${css("--font-mono")}`; ctx.textAlign = "center";
+    ctx.fillText("power", POWER.x, GROUND + 18); ctx.textAlign = "start";
+
     // модули
     for (const b of bots) {
       const s = CELL - 4;
-      const bob = b.slot < 0 && b.state === "SEARCH" ? Math.sin(b.wobble) * 1.5 : 0;
+      const bob = !storm && b.slot < 0 && b.state === "SEARCH" ? Math.sin(b.wobble) * 1.5 : 0;
       const x = b.x - s / 2, y = b.y - s / 2 + bob;
       ctx.fillStyle = c.mod; ctx.strokeStyle = c.edge; ctx.lineWidth = 1.5;
       ctx.fillRect(x, y, s, s); ctx.strokeRect(x, y, s, s);
-      const col = { SEARCH: c.blue, DOCKING: c.yellow, LINKED: c.green, FAULT: c.red }[b.state];
-      const blink = b.state === "SEARCH" && Math.floor((t + b.id * 90) / 400) % 2;
+      let col = { SEARCH: c.blue, DOCKING: c.yellow, LINKED: c.green, FAULT: c.red, LOW: c.orange, CHARGING: c.orange }[b.state];
+      let blink = (b.state === "SEARCH" || b.state === "CHARGING") && Math.floor((t + b.id * 90) / 400) % 2;
+      if (storm && b.state !== "FAULT") { col = c.violet; blink = Math.floor((t + b.id * 70) / 1200) % 3 === 0; }
       ctx.beginPath(); ctx.arc(b.x, b.y + bob, 5, 0, Math.PI * 2);
       ctx.fillStyle = blink ? c.bg : col; ctx.fill();
+      // заряд — у тех, кто не в конструкции (в ней модуль питается через грани)
+      if (b.state !== "LINKED") {
+        const w = s * b.battery / 100;
+        ctx.fillStyle = c.line; ctx.fillRect(x, y + s + 3, s, 3);
+        ctx.fillStyle = b.battery < LOW_BATTERY ? c.orange : c.green; ctx.fillRect(x, y + s + 3, w, 3);
+      }
     }
-    // подпись
+    // пыль
+    if (storm) {
+      ctx.fillStyle = c.dust; ctx.globalAlpha = 0.18; ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 0.55;
+      for (const p of dust) {
+        if (!reduceMotion) p.x = (p.x + p.v / 60) % W;
+        ctx.fillRect(p.x, p.y, 3, 1.5);
+      }
+      ctx.globalAlpha = 1;
+    }
+    // подписи
     const done = filled.filter(Boolean).length;
+    const charging = bots.filter((b) => b.state === "LOW" || b.state === "CHARGING").length;
     ctx.fillStyle = c.muted; ctx.font = `13px ${css("--font-mono")}`;
-    ctx.fillText(`собрано ${done} / ${SHAPES[shape].length}`, 16, 26);
+    ctx.fillText(`собрано ${done} / ${SHAPES[shape].length} · на зарядке ${charging}` + (storm ? ` · БУРЯ, ждём ${Math.ceil((stormUntil - t) / 1000)} с` : ""), 16, 26);
   }
 
   document.getElementById("shapeTower").addEventListener("click", () => setShape("tower"));
@@ -751,12 +829,17 @@ footer { border-top: 1px solid var(--line); padding-top: 18px; color: var(--mute
     const placed = bots.filter((b) => b.state === "LINKED");
     const top = Math.max(-1, ...placed.map((b) => SHAPES[shape][b.slot][1]));
     const upper = placed.filter((b) => SHAPES[shape][b.slot][1] >= top - 1);
-    const pool = upper.length ? upper : bots.filter((b) => b.state !== "FAULT");
+    const pool = upper.length ? upper : bots.filter((b) => b.state === "SEARCH");
     if (!pool.length) return;
     const b = pool[Math.floor(rand() * pool.length)];
     b.side = b.x < W / 2 ? -1 : 1;
     b.state = "FAULT"; b.slot = -1; b.faultAt = performance.now();
     assign();
+  });
+  btnStorm.addEventListener("click", () => {
+    const t = performance.now();
+    if (stormOn(t)) { stormUntil = 0; return; }
+    stormUntil = t + 8000; btnStorm.setAttribute("aria-pressed", "true");
   });
   document.getElementById("swarmScatter").addEventListener("click", scatter);
 

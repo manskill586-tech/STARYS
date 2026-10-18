@@ -206,6 +206,23 @@ static void testIgnoresForeignTraffic() {
   CHECK(w.m(1).neighbor() != 3 && w.m(2).neighbor() != 3);
 }
 
+static void testRoles() {
+  std::printf("Роль соседа известна после стыковки\n");
+  World w(0);
+  w.modules.emplace_back(1, Role::Builder);
+  w.modules.emplace_back(2, Role::Power);
+  w.inputs.resize(2);
+  w.in(1).distanceCm = w.in(2).distanceCm = 10;
+  w.run(2000);
+  CHECK(w.m(1).state() == State::Docking);
+  CHECK(w.m(1).neighborRole() == Role::Power);
+  CHECK(w.m(2).neighborRole() == Role::Builder);
+
+  Role r = Role::Builder;
+  CHECK(roleFromName("relay", r) && r == Role::Relay);
+  CHECK(!roleFromName("pilot", r));
+}
+
 static void testMessageNames() {
   std::printf("Имена сообщений туда-обратно\n");
   const MsgType all[] = {MsgType::Hello, MsgType::DockReq, MsgType::DockAck,
@@ -222,6 +239,7 @@ int main(int argc, char**) {
   testNoContact();
   testBootWaitsForNetwork();
   testIgnoresForeignTraffic();
+  testRoles();
   testMessageNames();
   std::printf("\n%d проверок, %d ошибок\n", checks, failures);
   return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
