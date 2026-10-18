@@ -51,6 +51,8 @@ static const int PIN_ECHO = 18;
 static const int PIN_CONTACT = 32;  // кнопка «Контакт» → GND
 static const int PIN_FAULT = 33;    // кнопка «Авария» → GND
 static const int PIN_SERVO = 13;
+static const int PIN_STORM = 14;    // переключатель «Буря» → GND (датчик пыли/ветра)
+static const int PIN_BATTERY = 34;  // потенциометр «Заряд», 0–100 %
 
 static const int SERVO_OPEN = 0;    // градусы
 static const int SERVO_CLOSED = 90;
@@ -65,7 +67,8 @@ Adafruit_SSD1306 oled(128, 64, &Wire, -1);
 bool oledOk = false;
 
 float distanceCm = 400;
-int battery = 100;
+float battery = 100;     // имитация заряда, %
+int lastPotPct = -1;     // последнее положение потенциометра
 uint32_t lastDistanceRead = 0;
 uint32_t lastMqttAttempt = 0;
 uint32_t lastBatteryTick = 0;
@@ -76,20 +79,25 @@ String serialLine;
 
 // ---- Железо ----------------------------------------------------------------
 
-void setLed(starys::Color color, bool blink, uint32_t now) {
-  bool r = false, g = false, b = false;
-  switch (color) {
-    case starys::Color::White:  r = g = b = true; break;
-    case starys::Color::Blue:   b = true; break;
-    case starys::Color::Yellow: r = g = true; break;
-    case starys::Color::Green:  g = true; break;
-    case starys::Color::Red:    r = true; break;
+// Яркость каналов 0–255 через ШИМ: так получаются фиолетовый и оранжевый.
+void setLed(starys::Led led, uint32_t now) {
+  int r = 0, g = 0, b = 0;
+  switch (led.color) {
+    case starys::Color::White:  r = g = b = 255; break;
+    case starys::Color::Blue:   b = 255; break;
+    case starys::Color::Yellow: r = 255; g = 180; break;
+    case starys::Color::Green:  g = 255; break;
+    case starys::Color::Red:    r = 255; break;
+    case starys::Color::Violet: r = 140; b = 255; break;
+    case starys::Color::Orange: r = 255; g = 60; break;
     case starys::Color::Off:    break;
   }
-  if (blink && (now / 400) % 2) r = g = b = false;
-  digitalWrite(PIN_LED_R, r);
-  digitalWrite(PIN_LED_G, g);
-  digitalWrite(PIN_LED_B, b);
+  // Обычное мигание — 0,4 с вкл / 0,4 с выкл; редкое (буря) — короткая вспышка раз в 2 с.
+  const bool off = led.slow ? (now % 2000) > 250 : led.blink && (now / 400) % 2;
+  if (off) r = g = b = 0;
+  analogWrite(PIN_LED_R, r);
+  analogWrite(PIN_LED_G, g);
+  analogWrite(PIN_LED_B, b);
 }
 
 float readDistance() {
@@ -105,6 +113,8 @@ float readDistance() {
 
 bool isContact() { return digitalRead(PIN_CONTACT) == LOW; }
 bool isFault() { return digitalRead(PIN_FAULT) == LOW; }
+bool isStorm() { return digitalRead(PIN_STORM) == LOW; }
+int readBatteryPot() { return analogRead(PIN_BATTERY) * 100 / 4095; }
 void lockServo(bool closed) { latch.write(closed ? SERVO_CLOSED : SERVO_OPEN); }
 
 // ---- Сообщения <-> JSON ----------------------------------------------------
@@ -122,6 +132,10 @@ String toJson(const starys::Message& m) {
       doc["id"] = m.from;
       doc["battery"] = m.battery;
       doc["neighbor"] = m.neighbor;
+      break;
+    case starys::MsgType::Storm:
+      doc["id"] = m.from;
+      doc["on"] = m.on;
       break;
     case starys::MsgType::Hello:
       doc["id"] = m.from;
@@ -148,6 +162,7 @@ bool fromJson(const char* text, starys::Message& m) {
   m.battery = doc["battery"] | 0;
   m.neighbor = doc["neighbor"] | 0;
   m.near = doc["near"] | false;
+  m.on = doc["on"] | false;
   starys::roleFromName(doc["role"] | "builder", m.role);
   return m.from != 0;
 }
@@ -217,13 +232,14 @@ void drawOled() {
   oled.setTextColor(SSD1306_WHITE);
   oled.setTextSize(1);
   oled.setCursor(0, 0);
-  oled.printf("STARYS  module #%d", MODULE_ID);
+  oled.printf("#%d %s%s", MODULE_ID, starys::roleName(module.role()),
+              module.stormActive() ? "  STORM!" : "");
   oled.setTextSize(2);
   oled.setCursor(0, 14);
   oled.print(starys::stateName(module.state()));
   oled.setTextSize(1);
   oled.setCursor(0, 36);
-  oled.printf("dist %3.0fcm  bat %d%%", distanceCm, battery);
+  oled.printf("dist %3.0fcm  bat %d%%", distanceCm, (int)battery);
   oled.setCursor(0, 46);
   if (module.neighbor())
     oled.printf("neighbor #%d", module.neighbor());
@@ -249,9 +265,12 @@ void setup() {
   pinMode(PIN_ECHO, INPUT);
   pinMode(PIN_CONTACT, INPUT_PULLUP);
   pinMode(PIN_FAULT, INPUT_PULLUP);
+  pinMode(PIN_STORM, INPUT_PULLUP);
   latch.attach(PIN_SERVO);
   lockServo(false);
-  setLed(starys::Color::White, false, 0);
+  starys::Led boot;
+  boot.color = starys::Color::White;
+  setLed(boot, 0);
 
   oledOk = oled.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   randomSeed(esp_random());
@@ -273,9 +292,19 @@ void loop() {
     lastDistanceRead = now;
     distanceCm = readDistance();
   }
-  if (now - lastBatteryTick >= 20000) {  // имитация разряда
+  // Имитация батареи: повернули потенциометр — заряд берётся с него,
+  // на зарядке растёт 5 %/с, в остальное время медленно садится.
+  if (now - lastBatteryTick >= 200) {
+    const float dt = (now - lastBatteryTick) / 1000.0f;
     lastBatteryTick = now;
-    if (battery > 5) battery--;
+    const int pot = readBatteryPot();
+    if (lastPotPct < 0 || abs(pot - lastPotPct) > 3) {
+      if (lastPotPct >= 0) battery = pot;
+      lastPotPct = pot;
+    }
+    if (module.state() == starys::State::Charging) battery += 5.0f * dt;
+    else if (module.state() != starys::State::Storm) battery -= 0.05f * dt;
+    battery = constrain(battery, 0.0f, 100.0f);
   }
 
   readSerial();
@@ -287,7 +316,8 @@ void loop() {
   in.distanceCm = distanceCm;
   in.contact = isContact();
   in.fault = isFault();
-  in.battery = battery;
+  in.battery = (int)battery;
+  in.stormSensor = isStorm();
   module.tick(in);
   flushOutgoing();
 
@@ -302,8 +332,7 @@ void loop() {
     lockServo(lastLatch);
   }
 
-  starys::Led led = module.led();
-  setLed(led.color, led.blink, now);
+  setLed(module.led(), now);
 
   if (now - lastOled >= 250) {
     lastOled = now;

@@ -1,0 +1,297 @@
+{
+  "version": 1,
+  "author": "STARYS team",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-rgb-led",
+      "id": "led",
+      "top": -110,
+      "left": 180,
+      "attrs": {
+        "common": "cathode"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rR",
+      "top": -30,
+      "left": 150,
+      "rotate": 90,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rG",
+      "top": -30,
+      "left": 175,
+      "rotate": 90,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rB",
+      "top": -30,
+      "left": 200,
+      "rotate": 90,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sonar",
+      "top": -140,
+      "left": -200,
+      "attrs": {
+        "distance": "300"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btnContact",
+      "top": 170,
+      "left": 200,
+      "attrs": {
+        "color": "green",
+        "label": "Контакт",
+        "key": "c"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btnFault",
+      "top": 250,
+      "left": 200,
+      "attrs": {
+        "color": "red",
+        "label": "Авария",
+        "key": "f"
+      }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "latch",
+      "top": 120,
+      "left": -260,
+      "attrs": {
+        "horn": "single"
+      }
+    },
+    {
+      "type": "board-ssd1306",
+      "id": "oled",
+      "top": 60,
+      "left": 200,
+      "attrs": {
+        "i2cAddress": "0x3c"
+      }
+    },
+    {
+      "type": "wokwi-slide-switch",
+      "id": "swStorm",
+      "top": 330,
+      "left": 200,
+      "attrs": {
+        "value": "0"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "potBattery",
+      "top": 260,
+      "left": -200,
+      "attrs": {
+        "value": "1023"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "esp:TX",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "esp:25",
+      "rR:1",
+      "red",
+      []
+    ],
+    [
+      "rR:2",
+      "led:R",
+      "red",
+      []
+    ],
+    [
+      "esp:26",
+      "rG:1",
+      "green",
+      []
+    ],
+    [
+      "rG:2",
+      "led:G",
+      "green",
+      []
+    ],
+    [
+      "esp:27",
+      "rB:1",
+      "blue",
+      []
+    ],
+    [
+      "rB:2",
+      "led:B",
+      "blue",
+      []
+    ],
+    [
+      "led:COM",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "sonar:VCC",
+      "esp:5V",
+      "red",
+      []
+    ],
+    [
+      "sonar:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "sonar:TRIG",
+      "esp:5",
+      "orange",
+      []
+    ],
+    [
+      "sonar:ECHO",
+      "esp:18",
+      "violet",
+      []
+    ],
+    [
+      "btnContact:1.l",
+      "esp:32",
+      "green",
+      []
+    ],
+    [
+      "btnContact:2.l",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "btnFault:1.l",
+      "esp:33",
+      "red",
+      []
+    ],
+    [
+      "btnFault:2.l",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "latch:PWM",
+      "esp:13",
+      "orange",
+      []
+    ],
+    [
+      "latch:V+",
+      "esp:5V",
+      "red",
+      []
+    ],
+    [
+      "latch:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "oled:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "oled:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "oled:SDA",
+      "esp:21",
+      "blue",
+      []
+    ],
+    [
+      "oled:SCL",
+      "esp:22",
+      "gold",
+      []
+    ],
+    [
+      "swStorm:2",
+      "esp:14",
+      "violet",
+      []
+    ],
+    [
+      "swStorm:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "potBattery:SIG",
+      "esp:34",
+      "orange",
+      []
+    ],
+    [
+      "potBattery:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "potBattery:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ]
+  ],
+  "dependencies": {}
+}

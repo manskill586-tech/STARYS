@@ -97,6 +97,24 @@
       "attrs": {
         "i2cAddress": "0x3c"
       }
+    },
+    {
+      "type": "wokwi-slide-switch",
+      "id": "swStorm",
+      "top": 330,
+      "left": 200,
+      "attrs": {
+        "value": "0"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "potBattery",
+      "top": 260,
+      "left": -200,
+      "attrs": {
+        "value": "1023"
+      }
     }
   ],
   "connections": [
@@ -242,6 +260,36 @@
       "oled:SCL",
       "esp:22",
       "gold",
+      []
+    ],
+    [
+      "swStorm:2",
+      "esp:14",
+      "violet",
+      []
+    ],
+    [
+      "swStorm:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "potBattery:SIG",
+      "esp:34",
+      "orange",
+      []
+    ],
+    [
+      "potBattery:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "potBattery:GND",
+      "esp:GND.1",
+      "black",
       []
     ]
   ],

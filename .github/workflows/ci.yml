@@ -29,9 +29,9 @@ jobs:
           python-version: "3.12"
       - name: Установить PlatformIO
         run: pip install platformio
-      - name: Собрать модули 1 и 2
+      - name: Собрать все модули (1, 2, power, scout)
         run: pio run -d firmware
       - uses: actions/upload-artifact@v4
         with:
           name: firmware
-          path: firmware/.pio/build/module*/firmware.bin
+          path: firmware/.pio/build/*/firmware.bin

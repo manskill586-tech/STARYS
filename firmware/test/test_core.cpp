@@ -8,8 +8,10 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <initializer_list>
 #include <vector>
 
+#include "../src/flywheel.h"
 #include "../src/swarm_core.h"
 
 using namespace starys;
@@ -223,10 +225,168 @@ static void testRoles() {
   CHECK(!roleFromName("pilot", r));
 }
 
+
+// Мир из модулей с заданными ролями.
+static World worldWithRoles(std::initializer_list<Role> roles) {
+  World w(0);
+  int id = 1;
+  for (Role r : roles) {
+    w.modules.emplace_back(id++, r);
+    w.inputs.emplace_back();
+  }
+  return w;
+}
+
+static void testStormFromScout() {
+  std::printf("Буря: разведчик предупреждает, рой замирает и возвращается к работе\n");
+  World w = worldWithRoles({Role::Builder, Role::Builder, Role::Scout});
+  w.in(1).distanceCm = w.in(2).distanceCm = 10;
+  w.in(1).contact = w.in(2).contact = true;
+  w.run(3000);
+  CHECK(w.m(1).state() == State::Linked);
+  CHECK(w.m(2).state() == State::Linked);
+  CHECK(w.m(3).state() == State::Search);
+
+  w.in(3).stormSensor = true;
+  w.run(300);
+  CHECK(w.m(1).state() == State::Storm);
+  CHECK(w.m(2).state() == State::Storm);
+  CHECK(w.m(3).state() == State::Storm);
+  CHECK(w.m(1).latchClosed() && w.m(2).latchClosed());  // держимся за соседа
+  CHECK(w.m(1).led().color == Color::Violet && w.m(1).led().slow);
+
+  // Буря длинная: разведчик повторяет STORM, никто не выходит раньше времени.
+  w.run(25000);
+  CHECK(w.m(1).state() == State::Storm);
+  CHECK(w.m(1).latchClosed());
+
+  w.in(3).stormSensor = false;
+  w.run(300);
+  CHECK(w.m(1).state() == State::Linked);
+  CHECK(w.m(2).state() == State::Linked);
+  CHECK(w.m(3).state() == State::Search);
+  w.run(8000);  // связь после бури живая, тайм-аута нет
+  CHECK(w.m(1).state() == State::Linked);
+  CHECK(w.m(1).neighbor() == 2);
+}
+
+static void testStormEndsWithoutScout() {
+  std::printf("Разведчик пропал во время бури -> через 10 с буря считается законченной\n");
+  World w = worldWithRoles({Role::Builder, Role::Scout});
+  w.run(500);
+  w.in(2).stormSensor = true;
+  w.run(300);
+  CHECK(w.m(1).state() == State::Storm);
+  w.linkUp = false;
+  w.run(9000);
+  CHECK(w.m(1).state() == State::Storm);
+  w.run(2000);
+  CHECK(w.m(1).state() == State::Search);
+}
+
+static void testStormOwnSensor() {
+  std::printf("Свой датчик бури: SEARCH -> STORM -> SEARCH, без сообщений\n");
+  SwarmModule m(4);
+  Inputs in;
+  for (uint32_t t = 50; t <= 500; t += 50) { in.now = t; m.tick(in); }
+  CHECK(m.state() == State::Search);
+  in.stormSensor = true;
+  in.now = 550; m.tick(in);
+  CHECK(m.state() == State::Storm);
+  Message msg;
+  while (m.popOutgoing(msg)) {}
+  for (uint32_t t = 600; t <= 5000; t += 50) { in.now = t; m.tick(in); }
+  CHECK(!m.popOutgoing(msg));  // радиомолчание
+  in.stormSensor = false;
+  in.now = 5050; m.tick(in);
+  CHECK(m.state() == State::Search);
+}
+
+static void testLowPowerCharging() {
+  std::printf("Мало заряда: найти энергомодуль, зарядиться, вернуться к работе\n");
+  World w = worldWithRoles({Role::Builder, Role::Power});
+  w.in(1).battery = 20;
+  w.in(2).battery = 100;
+  w.run(300);
+  CHECK(w.m(1).state() == State::LowPower);
+  CHECK(w.m(1).led().color == Color::Orange);
+
+  w.in(1).distanceCm = w.in(2).distanceCm = 10;
+  w.run(2000);
+  CHECK(w.m(1).state() == State::Docking);
+  CHECK(w.m(1).neighborRole() == Role::Power);
+
+  w.in(1).contact = true;
+  w.run(300);
+  w.in(1).contact = false;
+  w.run(3000);
+  CHECK(w.m(1).state() == State::Charging);
+  CHECK(w.m(2).state() == State::Linked);
+  CHECK(w.m(1).latchClosed() && w.m(2).latchClosed());
+  CHECK(w.m(1).led().color == Color::Orange && w.m(1).led().blink);
+
+  w.in(1).battery = 95;
+  w.run(100);
+  CHECK(w.m(1).state() == State::Search);
+  CHECK(w.m(2).state() == State::Search);  // получил BYE
+  CHECK(!w.m(1).latchClosed() && !w.m(2).latchClosed());
+}
+
+static void testLowPowerIgnoresBuilders() {
+  std::printf("Мало заряда: со строителем не стыкуемся, ждём энергомодуль\n");
+  World w(2);
+  w.in(1).battery = 10;
+  w.in(1).distanceCm = w.in(2).distanceCm = 10;
+  w.run(12000);
+  CHECK(w.m(1).state() == State::LowPower);
+  CHECK(w.m(1).neighbor() == 0);
+  CHECK(!w.m(1).latchClosed());
+}
+
+static void testPowerNeverLow() {
+  std::printf("Энергомодуль сам не уходит в LOW_POWER\n");
+  World w = worldWithRoles({Role::Power});
+  w.in(1).battery = 5;
+  w.run(2000);
+  CHECK(w.m(1).state() == State::Search);
+}
+
+static void testStormThenLowPowerCharging() {
+  std::printf("Буря во время зарядки: не отцепляемся, после бури заряжаемся дальше\n");
+  World w = worldWithRoles({Role::Builder, Role::Power, Role::Scout});
+  w.in(1).battery = 15;
+  w.in(1).distanceCm = w.in(2).distanceCm = 10;
+  w.in(1).contact = true;
+  w.run(3000);
+  CHECK(w.m(1).state() == State::Charging);
+  w.in(3).stormSensor = true;
+  w.run(5000);
+  CHECK(w.m(1).state() == State::Storm && w.m(1).latchClosed());
+  w.in(3).stormSensor = false;
+  w.run(2000);
+  CHECK(w.m(1).state() == State::Charging);
+}
+
+static void testFlywheel() {
+  std::printf("Маховик: обороты для переката на Земле, Марсе и Луне\n");
+  FlywheelSpec spec;
+  const float earth = rpmForPivot(spec, 9.81f, 1.0f);
+  const float mars = rpmForPivot(spec, 3.71f, 1.0f);
+  const float moon = rpmForPivot(spec, 1.62f, 1.0f);
+  std::printf("    без запаса: Земля %.0f, Марс %.0f, Луна %.0f об/мин\n", earth, mars, moon);
+  CHECK(earth > 8500 && earth < 9300);   // ≈ 8900 об/мин
+  CHECK(mars > 5200 && mars < 5800);     // ≈ 5500 об/мин
+  CHECK(mars < earth && moon < mars);    // слабее гравитация — меньше оборотов
+  CHECK(pivotPossible(spec, 9.81f));     // мотор справляется даже на Земле
+  FlywheelSpec weak = spec;
+  weak.maxRpm = 5000;                    // слабый мотор: на Земле нет, на Марсе почти
+  CHECK(!pivotPossible(weak, 9.81f));
+}
+
 static void testMessageNames() {
   std::printf("Имена сообщений туда-обратно\n");
   const MsgType all[] = {MsgType::Hello, MsgType::DockReq, MsgType::DockAck,
-                         MsgType::Data, MsgType::Bye};
+                         MsgType::Data, MsgType::Bye, MsgType::Storm};
   for (MsgType t : all) CHECK(msgTypeFromName(msgTypeName(t)) == t);
   CHECK(msgTypeFromName("HACK") == MsgType::None);
 }
@@ -240,6 +400,14 @@ int main(int argc, char**) {
   testBootWaitsForNetwork();
   testIgnoresForeignTraffic();
   testRoles();
+  testStormFromScout();
+  testStormEndsWithoutScout();
+  testStormOwnSensor();
+  testLowPowerCharging();
+  testLowPowerIgnoresBuilders();
+  testPowerNeverLow();
+  testStormThenLowPowerCharging();
+  testFlywheel();
   testMessageNames();
   std::printf("\n%d проверок, %d ошибок\n", checks, failures);
   return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

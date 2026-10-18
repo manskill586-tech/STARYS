@@ -1,0 +1,5 @@
+# Энергомодуль (роль power, ID 3). Сначала: cd firmware && pio run -e power
+[wokwi]
+version = 1
+firmware = '../../.pio/build/power/firmware.bin'
+elf = '../../.pio/build/power/firmware.elf'
